@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 from torch.cuda.amp import GradScaler, autocast
 from tqdm import tqdm
-from utils import save_config_file, accuracy, save_checkpoint, t_SNE_analysis
+from utils import accuracy, save_checkpoint, t_SNE_analysis
 
 torch.manual_seed(0)
 
@@ -52,7 +52,6 @@ class SimCLR(object):
 
     def train(self, train_loader):
         scaler = GradScaler(enabled=self.args.fp16_precision)
-        save_config_file(self.writer.log_dir, self.args)
         logging.info(f"Start SimCLR training for {self.args.epochs} epochs.")
 
         for epoch_counter in range(self.args.epochs+1):

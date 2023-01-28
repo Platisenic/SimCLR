@@ -4,7 +4,18 @@ import logging
 import os
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
+def randomCrop(x: np.array, k=4, p=0.2):
+    # x: [12, 2500]
+    total_lens = x.shape[-1]//k
+    zero_lens = int(total_lens*p)
+    r = np.random.randint(0, total_lens-zero_lens, k)
+    for j in range(x.shape[0]):
+        for i in range(k):
+            x[j][i*total_lens+r[i]:i*total_lens+r[i]+zero_lens] = 0
+    return x
+    
 
 class TVGHDataset(Dataset):
     def __init__(self,
@@ -13,14 +24,18 @@ class TVGHDataset(Dataset):
                  threshold = 40,
                  feature = 'sd',
                  is3lead=False,
-                 isRaligned=False):
+                 isRaligned=False,
+                 split=True,
+                 transform=None):
         self.anno = pd.read_csv(annotation_file)
         self.ecg_dir = ecg_dir
         self.threshold = threshold
         self.feature = feature
         self.is3lead = is3lead
         self.isRaligned = isRaligned
+        self.split = split
         self.target = self.anno[f'{self.feature}_{self.threshold}'].to_numpy()
+        self.transform = transform
 
         logging.info(f'dataset: {os.path.basename(annotation_file)}')
         lables = np.bincount(self.target)
@@ -69,12 +84,28 @@ class TVGHDataset(Dataset):
                     part2[10] - part2[11],
                 ]) # [3, 2500]
 
-        return [part1, part2], label
+        if self.transform:
+            part1 = self.transform(part1)
+            part2 = self.transform(part2)
 
+        if self.split:
+            return [part1, part2], label
+        else:
+            return part1, label
+
+def draw3leadFigure(datas): # datas:(3, sample)
+    fig = plt.figure(figsize=(24, 8))
+    fig.set_facecolor('xkcd:light grey')
+    for i, data in enumerate(datas):
+        subplot = fig.add_subplot(3, 1, i+1)
+        subplot.plot(data)
+    plt.show()
+    plt.close(fig)
 
 if __name__ == '__main__':
-    dataset = TVGHDataset('/ecgdata/libos/SimCLR/anno/40_9pa_rr/all.csv')
+    dataset = TVGHDataset('/ecgdata/libos/SimCLR/anno/40_9pa_rr/valid.csv', transform=randomCrop)
     data, label = dataset[0]
     print(data[0].shape)
     print(data[1].shape)
     print(label)
+    # draw3leadFigure(data[1][:3])

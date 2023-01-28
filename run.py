@@ -6,10 +6,11 @@ import torch
 import torch.backends.cudnn as cudnn
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import models
-from data_ecg_aug.dataset import TVGHDataset
+from data_ecg_aug.dataset import TVGHDataset, randomCrop
 from models.mayo_simclr import *
 from models.xresnet_simclr import *
 from simclr import SimCLR
+from utils import save_config_file
 
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
@@ -44,7 +45,7 @@ parser.add_argument('--fp16-precision', action='store_true',
                     help='Whether or not to use 16-bit precision GPU training.')
 parser.add_argument('--out-dim', default=128, type=int,
                     help='feature dimension (default: 128)')
-parser.add_argument('--log-every-n-epochs', default=10, type=int,
+parser.add_argument('--log-every-n-epochs', default=20, type=int,
                     help='Log every n epochs')
 parser.add_argument('--temperature', default=0.07, type=float,
                     help='softmax temperature (default: 0.07)')
@@ -56,6 +57,8 @@ parser.add_argument('--gpu-index', default=0, type=int, help='Gpu index.')
 def main():
     args = parser.parse_args()
     assert args.n_views == 2, "Only two view training is supported. Please use --n-views 2."
+    writer = SummaryWriter(comment='-pretrained')
+    save_config_file(writer.log_dir, args.__dict__)
     if torch.cuda.is_available():
         args.device = torch.device('cuda')
         cudnn.deterministic = True
@@ -64,7 +67,6 @@ def main():
         args.device = torch.device('cpu')
         args.gpu_index = -1
 
-    writer = SummaryWriter()
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s [%(levelname)s]: %(message)s',
@@ -75,7 +77,7 @@ def main():
         ]
     )
 
-    train_dataset = TVGHDataset(args.anno, args.ecgdir, is3lead=args.is3lead, isRaligned=args.isRaligned)
+    train_dataset = TVGHDataset(args.anno, args.ecgdir, is3lead=args.is3lead, isRaligned=args.isRaligned, transform=randomCrop)
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size, shuffle=True,
         num_workers=args.workers, pin_memory=True, drop_last=True)

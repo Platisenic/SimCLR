@@ -46,3 +46,34 @@ def t_SNE_analysis(x: np.ndarray, filename: str): # [samples, features]
     plt.yticks()
     plt.savefig(filename)
     plt.close(fig)
+
+def my_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray):
+    y_true = y_true.astype('bool')
+    y_pred = y_pred.astype('bool')
+    tn = (~y_true & ~y_pred).sum()
+    fp = (~y_true & y_pred).sum()
+    fn = (y_true & ~y_pred).sum()
+    tp = (y_true & y_pred).sum()
+
+    return tn, fp, fn, tp
+
+def cal_metrics(tn, fp, fn, tp):
+    accuracy = (tp + tn) / (tn + fp + fn + tp)
+    if tp + fp == 0:
+        precision = tp / (tp + fp + 1)
+    else:
+        precision = tp / (tp + fp)
+    if tp + fn == 0:
+        recall = tp / (tp + fn + 1)
+    else:
+        recall = tp / (tp + fn)
+    if fp + tn == 0:
+        specificity = tn / (fp + tn + 1)
+    else:
+        specificity = tn / (fp + tn)
+    if precision + recall == 0:
+        f1 = 2 * precision * recall / (precision + recall + 1)
+    else:
+        f1 = 2 * precision * recall / (precision + recall)
+
+    return accuracy, precision, recall, specificity, f1
